@@ -5,6 +5,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import {
   initTelemetry,
+  disableTelemetry,
   getTelemetryManager,
   getTelemetryData,
   isTelemetryInitialized,
@@ -585,6 +586,66 @@ describe("telemetry", () => {
       if (init.status === "ok") {
         expect(init.data.serviceName).toBe("req-data-test");
       }
+    });
+  });
+
+  describe("privacy, sensitive data redaction, and disable telemetry", () => {
+    it("disableTelemetry() gracefully stops and clears active telemetry", async () => {
+      initTelemetry({ serviceName: "disable-test", exporter: "memory" });
+      expect(isTelemetryInitialized()).toBe(true);
+
+      const res = await disableTelemetry();
+      expect(res.status).toBe("ok");
+      expect(isTelemetryInitialized()).toBe(false);
+      expect(getTelemetryManager()).toBeNull();
+    });
+
+    it("supports enabled: false configuration without overhead or error", () => {
+      const res = initTelemetry({
+        serviceName: "disabled-cfg-test",
+        enabled: false,
+        exporter: "memory",
+      });
+      expect(res.status).toBe("ok");
+      expect(isTelemetryInitialized()).toBe(false);
+    });
+
+    it("automatically redacts sensitive keys and Stellar secret keys from span attributes", async () => {
+      initTelemetry({ serviceName: "redaction-test", exporter: "memory" });
+
+      await traceSpan("test.operation", (span) => {
+        span?.setAttribute("safe.attribute", "safe_value");
+        span?.setAttribute("secretKey", "super_secret");
+        span?.setAttribute("user.token", "bearer-token-123");
+        span?.setAttribute("account.mnemonic", "twelve word seed phrase here now");
+        span?.setAttribute("transaction.payload", '{"envelope":"xdr_payload"}');
+        span?.setAttribute("transaction.envelope_xdr", "AAAA...signed_tx");
+        span?.setAttribute("signature", "sig_bytes");
+        // Secret key starting with S and 56 chars
+        span?.setAttribute("wallet.custom", "SBBZ3GHL2P7W2Q3L72A3232323232323232323232323232323232323");
+        // Nested object with sensitive fields
+        span?.setAttribute("nested.auth", {
+          apiKey: "secret-api-key",
+          publicInfo: "public-val",
+        });
+      });
+
+      const spans = getTelemetrySpans();
+      expect(spans.length).toBeGreaterThan(0);
+      const span = spans[spans.length - 1];
+
+      expect(span?.attributes["safe.attribute"]).toBe("safe_value");
+      expect(span?.attributes["secretKey"]).toBe("[REDACTED]");
+      expect(span?.attributes["user.token"]).toBe("[REDACTED]");
+      expect(span?.attributes["account.mnemonic"]).toBe("[REDACTED]");
+      expect(span?.attributes["transaction.payload"]).toBe("[REDACTED]");
+      expect(span?.attributes["transaction.envelope_xdr"]).toBe("[REDACTED]");
+      expect(span?.attributes["signature"]).toBe("[REDACTED]");
+      expect(span?.attributes["wallet.custom"]).toBe("[REDACTED]");
+
+      const nested = span?.attributes["nested.auth"] as Record<string, unknown>;
+      expect(nested.apiKey).toBe("[REDACTED]");
+      expect(nested.publicInfo).toBe("public-val");
     });
   });
 });

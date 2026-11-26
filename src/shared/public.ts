@@ -33,3 +33,8 @@ export {
   DEFAULT_MAINNET_SAFETY_THRESHOLD_XLM,
   MAINNET_NETWORK_PASSPHRASE,
 } from "./mainnetSafety";
+
+export {
+  exportSafeDiagnostics,
+} from "./diagnostics";
+export type { SafeDiagnosticsExport } from "./diagnostics";
