@@ -37,6 +37,7 @@ It is deliberately stateless and framework-agnostic. It runs in Node, the browse
 ## Table of Contents
 
 - [Installation](#installation)
+- [Supported Runtimes and Compatibility](#supported-runtimes-and-compatibility)
 - [Quick Start](#quick-start)
 - [Modules](#modules)
 - [API Reference](#api-reference)
@@ -63,10 +64,34 @@ It is deliberately stateless and framework-agnostic. It runs in Node, the browse
 ## Installation
 
 ```bash
-npm install sorokit-core @creit.tech/stellar-wallets-kit
+npm install sorokit-core @stellar/stellar-sdk@13.3.0
 ```
 
-`@creit.tech/stellar-wallets-kit` is a required peer dependency. It provides the underlying wallet adapter infrastructure that `sorokit-core` builds on.
+`@stellar/stellar-sdk` is the mandatory peer dependency providing Stellar protocol types, cryptographic signing, and XDR serialisation.
+
+### Optional Peer Dependencies
+
+- `@walletconnect/sign-client` (`>=2.0.0`): Install only when using `WalletConnectAdapter` for QR-code mobile wallet connection.
+- `@creit.tech/stellar-wallets-kit` (`>=1.0.0`): Install only when using `SwkSignAdapter` or third-party wallet aggregators.
+
+```bash
+# Optional: install only if using WalletConnect or Stellar Wallets Kit
+npm install @walletconnect/sign-client @creit.tech/stellar-wallets-kit
+```
+
+---
+
+## Supported Runtimes and Compatibility
+
+Sorokit Core is tested and verified across modern server and client execution environments:
+
+| Runtime | Supported Versions | Tested in CI | Notes |
+|---------|-------------------|--------------|-------|
+| **Node.js** | `18.x`, `20.x`, `22.x` | Yes (Ubuntu) | Full SDK core, Horizon/RPC, offline signing, transaction pipelines. |
+| **Browsers** | Chrome ≥ 100, Firefox ≥ 100, Safari ≥ 15, Edge ≥ 100 | Yes (jsdom + browser tests) | Web Crypto, `window.localStorage` (with automatic in-memory fallback), extension wallet adapters. |
+| **Edge / Serverless** | Cloudflare Workers, Vercel Edge, AWS Lambda | Yes | Stateless Soroban RPC queries and transaction submission. |
+
+> See [Supported Runtime and Browser Compatibility](docs/runtime-compatibility.md) for full details on browser API requirements, browser-only wallet guards (`SorokitErrorCode.WALLET_BROWSER_ONLY`), and CI coverage links.
 
 ---
 
