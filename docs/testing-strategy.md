@@ -106,13 +106,25 @@ every PR. If a future contribution adds real-testnet coverage, it should:
       ),
     );
   });
+
+  it("exercises valid amount boundaries: positive amounts within range and precision are always accepted", () => {
+    fc.assert(
+      fc.property(fc.bigInt({ min: 1n, max: MAX_STROOPS }), (stroops) => {
+        const xlm = stroopsToXlm(stroops);
+        const result = validateAmount(xlm);
+        expect(result.status).toBe("ok");
+      }),
+    );
+  });
   ```
 
   Bound the generated range to values that are actually meaningful for the
   function under test (e.g. within Stellar's `MAX_STROOPS`), rather than
   letting `fast-check` generate the full `bigint` domain — an out-of-range
   failure just tells you the generator was too wide, not that the function
-  is wrong.
+  is wrong. Similarly, exercise invalid boundaries (zero, negatives, precision
+  overflow beyond 7 decimal places, and values exceeding `MAX_AMOUNT`) to assert
+  validation invariants and error classifications.
 
 ### Performance tests
 
